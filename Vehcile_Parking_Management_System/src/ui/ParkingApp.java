@@ -14,35 +14,53 @@ public class ParkingApp extends JFrame {
     private ParkingLot lot;
     private DefaultTableModel tableModel;
 
-    public ParkingApp() {
+    public ParkingApp(String username) {
         lot = new ParkingLot();
         setTitle("Vehicle Parking System");
-        setSize(850, 600);
+        setSize(900, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // === Top Panel: Add Vehicle ===
+        // === Top Panel (Header + Entry form stacked) ===
         JPanel topPanel = new JPanel();
-        topPanel.setLayout(new FlowLayout());
+        topPanel.setLayout(new BorderLayout());
 
+        // Header: Welcome message + Logout button
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        JLabel welcomeLabel = new JLabel("  Logged in as: " + username);
+        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        JButton logoutButton = new JButton("Logout");
+
+        headerPanel.add(welcomeLabel, BorderLayout.WEST);
+        headerPanel.add(logoutButton, BorderLayout.EAST);
+
+        // Entry form
+        JPanel entryPanel = new JPanel(new FlowLayout());
         JTextField numberField = new JTextField(10);
-        String[] types = {"Car", "Bike", "Truck"};
-        JComboBox<String> typeBox = new JComboBox<>(types);
+        JComboBox<String> typeBox = new JComboBox<>(new String[]{"Car", "Bike", "Truck"});
         JButton addButton = new JButton("Park Vehicle");
 
-        topPanel.add(new JLabel("Vehicle Number:"));
-        topPanel.add(numberField);
-        topPanel.add(new JLabel("Type:"));
-        topPanel.add(typeBox);
-        topPanel.add(addButton);
+        entryPanel.add(new JLabel("Vehicle Number:"));
+        entryPanel.add(numberField);
+        entryPanel.add(new JLabel("Type:"));
+        entryPanel.add(typeBox);
+        entryPanel.add(addButton);
 
-        // === Center: Vehicle Table ===
-        String[] columnNames = {"Number", "Type", "Entry Time"};
-        tableModel = new DefaultTableModel(columnNames, 0);
+        // Stack headerPanel and entryPanel vertically
+        JPanel stackedTop = new JPanel();
+        stackedTop.setLayout(new GridLayout(2, 1));
+        stackedTop.add(headerPanel);
+        stackedTop.add(entryPanel);
+
+        add(stackedTop, BorderLayout.NORTH);  // Place at the top of the frame
+
+        // === Vehicle Table Center ===
+        tableModel = new DefaultTableModel(new String[]{"Number", "Type", "Entry Time"}, 0);
         JTable table = new JTable(tableModel);
-        JScrollPane scrollPane = new JScrollPane(table);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+        add(tableScrollPane, BorderLayout.CENTER);
 
-        // === Bottom Panel: Remove Vehicle + Print Bill ===
+        // === Bottom Panel: Remove + Print ===
         JPanel bottomPanel = new JPanel(new FlowLayout());
         JTextField removeField = new JTextField(10);
         JButton removeButton = new JButton("Remove Vehicle");
@@ -55,49 +73,56 @@ public class ParkingApp extends JFrame {
         bottomPanel.add(printBillButton);
         bottomPanel.add(resultLabel);
 
-        // === Add all panels ===
-        add(topPanel, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
         add(bottomPanel, BorderLayout.SOUTH);
 
         // === Action Listeners ===
 
+        // Logout logic
+        logoutButton.addActionListener(e -> {
+            dispose();  // Close current window
+            new LoginForm();  // Show login form again
+        });
+
+        // Park Vehicle logic
         addButton.addActionListener((ActionEvent e) -> {
-            String num = numberField.getText().trim();
+            String number = numberField.getText().trim();
             String type = (String) typeBox.getSelectedItem();
 
-            if (num.isEmpty()) {
+            if (number.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Enter vehicle number!");
                 return;
             }
 
-            Vehicle v = switch (type) {
-                case "Car" -> new Car(num);
-                case "Bike" -> new Bike(num);
-                case "Truck" -> new Truck(num);
+            Vehicle vehicle = switch (type) {
+                case "Car" -> new Car(number);
+                case "Bike" -> new Bike(number);
+                case "Truck" -> new Truck(number);
                 default -> null;
             };
 
-            if (lot.parkVehicle(v)) {
-                String formattedTime = formatTimestamp(v.getEntryTime());
-                tableModel.addRow(new Object[]{v.getNumber(), v.getType(), formattedTime});
+            if (lot.parkVehicle(vehicle)) {
+                tableModel.addRow(new Object[]{
+                        vehicle.getNumber(),
+                        vehicle.getType(),
+                        formatTimestamp(vehicle.getEntryTime())
+                });
                 numberField.setText("");
             } else {
                 JOptionPane.showMessageDialog(this, "Vehicle already parked or invalid.");
             }
         });
 
+        // Remove logic
         removeButton.addActionListener((ActionEvent e) -> {
-            String num = removeField.getText().trim();
-            Vehicle v = lot.removeVehicle(num);
-            if (v != null) {
-                double charges = v.calculateCharge();
-                resultLabel.setText("Charges: ₹" + String.format("%.2f", charges));
+            String number = removeField.getText().trim();
+            Vehicle removed = lot.removeVehicle(number);
+
+            if (removed != null) {
+                resultLabel.setText("Charges: ₹" + String.format("%.2f", removed.calculateCharge()));
                 removeField.setText("");
 
-                // Remove from table
                 for (int i = 0; i < tableModel.getRowCount(); i++) {
-                    if (tableModel.getValueAt(i, 0).equals(num)) {
+                    if (tableModel.getValueAt(i, 0).equals(number)) {
                         tableModel.removeRow(i);
                         break;
                     }
@@ -107,18 +132,19 @@ public class ParkingApp extends JFrame {
             }
         });
 
+        // Print bill logic
         printBillButton.addActionListener((ActionEvent e) -> {
-            String num = removeField.getText().trim();
-            Vehicle v = lot.getVehicle(num);
+            String number = removeField.getText().trim();
+            Vehicle vehicle = lot.getVehicle(number);
 
-            if (v != null) {
-                long currentTime = System.currentTimeMillis();
-                long durationMillis = currentTime - v.getEntryTime();
-                long minutes = durationMillis / (60 * 1000);
+            if (vehicle != null) {
+                long now = System.currentTimeMillis();
+                long duration = now - vehicle.getEntryTime();
+                long minutes = duration / (60 * 1000);
                 long hours = minutes / 60;
                 minutes = minutes % 60;
 
-                double charges = v.calculateCharge();
+                double charges = vehicle.calculateCharge();
 
                 String bill = """
                         === Parking Bill ===
@@ -129,10 +155,10 @@ public class ParkingApp extends JFrame {
                         Time Spent: %d hours %d minutes
                         Charges: ₹%.2f
                         """.formatted(
-                        v.getNumber(),
-                        v.getType(),
-                        formatTimestamp(v.getEntryTime()),
-                        formatTimestamp(currentTime),
+                        vehicle.getNumber(),
+                        vehicle.getType(),
+                        formatTimestamp(vehicle.getEntryTime()),
+                        formatTimestamp(now),
                         hours, minutes,
                         charges
                 );
@@ -146,14 +172,8 @@ public class ParkingApp extends JFrame {
         setVisible(true);
     }
 
-    // Helper method to format timestamp
     private String formatTimestamp(long millis) {
         SimpleDateFormat sdf = new SimpleDateFormat("dd-MMM-yyyy hh:mm a");
-        Date resultDate = new Date(millis);
-        return sdf.format(resultDate);
-    }
-
-    public static void main(String[] args) {
-        new ParkingApp();
+        return sdf.format(new Date(millis));
     }
 }
