@@ -1,14 +1,16 @@
 package model;
 
 public class Truck extends Vehicle {
-    public Truck(String number) {
-        super(number);
-        this.type = "Truck";
+    public Truck(String name)
+    {
+        super(name);
+        this.type="Truck";
     }
 
     @Override
     public double calculateCharge() {
-        long duration = (System.currentTimeMillis() - entryTime) / 1000;
-        return 30 + duration * 0.15;
+        long durationInMilliSec=(System.currentTimeMillis()-entryTime);
+        double durationInMin=durationInMilliSec/(1000.0*60);
+        return 1* Math.ceil(durationInMin);  //If a vehicle stayed for 1 minute and 30 seconds, it should still be charged for 2 minutes (rounding up), just like in real-world parking systems.
     }
 }

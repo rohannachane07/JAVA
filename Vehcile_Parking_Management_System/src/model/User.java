@@ -8,9 +8,9 @@ public class User {
     private String password;
 
     // Constructors
-    public User() {}
+    public User() {}  // Default constructor (important for libraries like JDBC, Hibernate, etc.)
 
-    public User(String name, String email, String username, String password) {
+    public User(String name, String email, String username, String password) {  //we skip id here since the DB will auto-generate it)
         this.name = name;
         this.email = email;
         this.username = username;

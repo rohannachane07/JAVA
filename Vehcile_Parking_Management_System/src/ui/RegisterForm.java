@@ -1,5 +1,12 @@
 package ui;
-
+/*
+This is a Java Swing GUI form that allows a user to register by inputting:
+Name
+Email
+Username
+Password
+When the user clicks Register, the info is stored in the MySQL users table via UserDAO.
+ */
 import model.User;
 import service.UserDAO;
 
@@ -18,7 +25,7 @@ public class RegisterForm extends JFrame {
         setSize(350, 300);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLayout(new GridLayout(5, 2, 10, 10));
+        setLayout(new GridLayout(5, 2, 10, 10));  //A grid layout with 5 rows and 2 columns. 10px gaps between components. This means: each label and field are neatly aligned.
 
         add(new JLabel("Name:"));
         nameField = new JTextField();
